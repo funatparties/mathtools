@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from sympy.combinatorics import PermutationGroup, Permutation, CyclicGroup
-import igraph as ig
+import networkx as nx
 import matplotlib.pyplot as plt
 
 """
@@ -38,33 +38,19 @@ def generate_permuation_cycle(g: Permutation):
 
 
 def generate_graph_from_cycles(cycles: list[list[Permutation]]):
-    g = ig.Graph()
-    # need to add vertices first or igraph freaks out
-    vs = set([str(e) for cycle in cycles for e in cycle])
-    # does strange things if you pass a set
-    g.add_vertices(list(vs))
+    g = nx.Graph()
 
     for cycle in cycles:
         print(f'Adding {cycle} to graph')
-        edges = [(str(cycle[i]), str(cycle[i+1])) for i in range(len(cycle) - 1)]
-        edges.append((str(cycle[-1]), str(cycle[0])))
-        g.add_edges(edges)
+        # edge for each adjacent pair
+        g.add_edges_from([(str(cycle[i]), str(cycle[i+1])) for i in range(len(cycle) - 1)])
+        g.add_edge((str(cycle[-1]), str(cycle[0])))
     return g
 
 
-def test_plot(graph: ig.Graph):
+def test_plot(g: nx.Graph):
     fig, ax = plt.subplots(figsize=(5,5))
-    ig.plot(
-        graph,
-        target=ax,
-        layout="fruchterman_reingold",
-        vertex_size=30,
-        vertex_color="steelblue",
-        vertex_frame_width=4.0,
-        vertex_frame_color="white",
-        # vertex_label=g.vs["name"],
-        vertex_label_size=7.0,
-    )
+    nx.draw_spring(g, ax=ax)
     plt.show()
 
 
