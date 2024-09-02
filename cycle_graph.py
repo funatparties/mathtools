@@ -44,7 +44,7 @@ def generate_graph_from_cycles(cycles: list[list[Permutation]]):
         print(f'Adding {cycle} to graph')
         # edge for each adjacent pair
         g.add_edges_from([(str(cycle[i]), str(cycle[i+1])) for i in range(len(cycle) - 1)])
-        g.add_edge((str(cycle[-1]), str(cycle[0])))
+        g.add_edge(str(cycle[-1]), str(cycle[0]))
     return g
 
 
