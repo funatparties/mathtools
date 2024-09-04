@@ -3,17 +3,17 @@ from sympy.combinatorics import PermutationGroup, Permutation, CyclicGroup
 import networkx as nx
 import matplotlib.pyplot as plt
 
-"""
+def generate_maximal_cycles(G: PermutationGroup):
+    """
     Generate the maximal cycles of the group.
 
-    Have not yet proved correctness but seems good.
+    Have not yet proved correctness but seems right.
 
     1. take element of highest order
     2. generate cycle
     3. remove elements that occur in cycle
     4. repeat until all elements gone
-"""
-def generate_maximal_cycles(G: PermutationGroup):
+    """
     cycles = []
     # elements sorted by order
     elements = OrderedDict(sorted({e:e.order() for e in G.elements}.items(), key=lambda item:item[1]))

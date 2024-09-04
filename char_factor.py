@@ -1,6 +1,7 @@
 from sympy.ntheory import factorint
 
-"""
+def shanks_factorisation(n: int) -> dict[int, list[int]]:
+    """
     Uses the factorisation method described by Daniel Shanks (1978) to produce
     the characteristic factors of the (Euler) totient of an integer n.
 
@@ -11,8 +12,7 @@ from sympy.ntheory import factorint
     For an integer n, factor as 2^m * p_i^a_i * ... where p_i are odd primes.
     if m >= 2, add the factor <2>, then add <2^(m-2)> if m > 2.
     Add the prime power factors of (p_i - 1), then add <p_i^(a_i - 1)> if a_i > 1.
-"""
-def shanks_factorisation(n: int) -> dict[int, list[int]]:
+    """
     characteristic_factors = dict()
     # add a new factor p^a
     def _add_index(p, a):
@@ -45,14 +45,14 @@ def shanks_factorisation(n: int) -> dict[int, list[int]]:
     return {k:sorted(v) for (k,v) in characteristic_factors.items()}
 
 
-"""
+def reduce_char_factors(characteristic_factors: dict[int, list[int]]) -> list[int]:
+    """
     Reduces the characteristic factors to a shorter form by combining coprime
     elements.
 
     This is equivalent to converting a primary decomposition to an invariant factor
     decomposition.
-"""
-def reduce_char_factors(characteristic_factors: dict[int, list[int]]) -> list[int]:
+    """
     reduced_factors = []
     while len(characteristic_factors) > 0:
         product = 1
@@ -69,10 +69,11 @@ def reduce_char_factors(characteristic_factors: dict[int, list[int]]) -> list[in
 def factors(n: int):
     return reduce_char_factors(shanks_factorisation(n))
 
-"""
-    Shanks factorisation as above but returns in list form
-"""
+
 def shanks_factorisation_list(n: int) -> list[int]:
+    """
+    Shanks factorisation as above but returns in list form
+    """
     characteristic_factors = []
     prime_factors = factorint(n)
 
