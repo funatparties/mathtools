@@ -3,6 +3,7 @@ from sympy.ntheory import divisors
 from sympy.functions.combinatorial.numbers import totient
 from sympy.combinatorics import CyclicGroup, Coset, PermutationGroup, Permutation
 from typing import NamedTuple
+import networkx as nx
 
 class QuotientGroup(NamedTuple):
     G1: int
@@ -159,3 +160,9 @@ def enumerate_cosets(G: PermutationGroup, H: PermutationGroup) -> list[Coset]:
         cosets.append(Coset(g,H,G))
     return cosets
 
+
+def generate_hasse_graph(l: list[TupleSubgroup]):
+    ls = [set(e) for e in l]
+    edges = [(a,b) for a in range(len(ls)) for b in range(len(ls)) if a != b and ls[b].issubset(ls[a])]
+    g = nx.DiGraph(edges)
+    return nx.transitive_reduction(g)
