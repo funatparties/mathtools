@@ -2,14 +2,25 @@ from sympy import igcd
 from sympy.ntheory import divisors
 from sympy.functions.combinatorial.numbers import totient
 from sympy.combinatorics import CyclicGroup, Coset, PermutationGroup, Permutation
-from collections import namedtuple
+from typing import NamedTuple
 
-QuotientGroup = namedtuple('QuotientGroup', 'G1, G2, order')
-GoursatTuple = namedtuple('GoursatTuple', 'G1, G2, H1, H2, order')
+class QuotientGroup(NamedTuple):
+    G1: int
+    G2: int
+    order: int
 
-def subgroups_of_cycle_product_order(n: int, m: int)  -> list[list[tuple[Permutation, Permutation]]]:
-    assert n > 0 and m > 0, "n and m must be positive"
-    # trivial products
+class GoursatTuple(NamedTuple):
+    G1: int
+    G2: int
+    H1: int
+    H2: int
+    order: int
+
+TupleSubgroup = list[tuple[Permutation, Permutation]]
+
+def subgroups_of_cycle_product_order(n: int, m: int)  -> list[TupleSubgroup]:
+    assert n > 0 and m > 0, "orders must be positive"
+    # shortcut the trivial products
     if n == 1:
         return [[(Permutation(0), e) for e in g.elements] for g in subgroups_of_cyclic_order(m).values()]
     if m == 1:
@@ -19,7 +30,7 @@ def subgroups_of_cycle_product_order(n: int, m: int)  -> list[list[tuple[Permuta
     return subgroups_of_cycle_product(G, H)
 
 
-def subgroups_of_cycle_product(G: PermutationGroup, H: PermutationGroup) -> list[list[tuple[Permutation, Permutation]]]:
+def subgroups_of_cycle_product(G: PermutationGroup, H: PermutationGroup) -> list[TupleSubgroup]:
     """
     Compute the subgroups of a direct product of two cyclic groups with orders
     n and m.
@@ -31,32 +42,44 @@ def subgroups_of_cycle_product(G: PermutationGroup, H: PermutationGroup) -> list
     """
     assert G.is_cyclic and H.is_cyclic, "Groups must be cyclic"
     
-    quotients_G = _subquotients(G.order())
-    quotients_H = _subquotients(H.order())
-    # find all pairs with equal order
-    pairs = [(a,b) for a in quotients_G for b in quotients_H if a.order == b.order]
-    # create tuples
-    tuples = [GoursatTuple(a.G1, a.G2, b.G1, b.G2, a.order) for (a,b) in pairs]
-    
-    subgroups = []
-    for tup in tuples:
-        G1 = G.subgroup_search(lambda x: x.order() == tup.G1)
-        G2 = G.subgroup_search(lambda x: x.order() == tup.G2)
-        H1 = H.subgroup_search(lambda x: x.order() == tup.H1)
-        H2 = H.subgroup_search(lambda x: x.order() == tup.H2)
+    subgroups: list[TupleSubgroup] = []
+    o_G = G.order()
+    g = G.generators[0]
+    o_H = H.order()
+    h = H.generators[0]
+
+    tuples = _generate_tuples(o_G, o_H)
+    for t in tuples:
+        # subgroup of G with order n can be gnerated by g**(G.order()/n) where g is a generator of G
+        G1 = G.subgroup([g**(o_G//t.G1)])
+        G2 = G.subgroup([g**(o_G//t.G2)])
+        H1 = H.subgroup([h**(o_H//t.H1)])
+        H2 = H.subgroup([h**(o_H//t.H2)])
         # this is probably slow but numbers should all be small
         # add max statement for case where order = 1
-        coprimes = [i for i in range(1, max(tup.order, 2)) if igcd(i, tup.order) == 1]
-        assert len(coprimes) == totient(tup.order), f'Error finding coprimes, expected {totient(tup.order)}, got {len(coprimes)}'
+        coprimes = [i for i in range(1, max(t.order, 2)) if igcd(i, t.order) == 1]
+        assert len(coprimes) == totient(t.order), f'Error finding coprimes, expected {totient(t.order)}, found {len(coprimes)}'
 
         for j in coprimes:
-            f = [G1.generators[0], H1.generators[0]**j]
+            f: Isomorphism = (G1.generators[0], H1.generators[0]**j)
             sub = _subgroup_from_tuple(G1, G2, H1, H2, f)
             subgroups.append(sub)
     return subgroups
 
 
-def _subquotients(n: int):
+def _generate_tuples(n: int, m: int) -> list[GoursatTuple]:
+    """
+        Generate tuples that correspond to subgroups as per [1]
+    """
+    quotients_G = _subquotients(n)
+    quotients_H = _subquotients(m)
+    # find all pairs with equal order
+    pairs = [(a,b) for a in quotients_G for b in quotients_H if a.order == b.order]
+    # create tuples
+    return [GoursatTuple(a.G1, a.G2, b.G1, b.G2, a.order) for (a,b) in pairs]
+
+
+def _subquotients(n: int) -> list[QuotientGroup]:
     """
     Find the subquotients of a cycle group of order n.
     """
@@ -66,7 +89,7 @@ def _subquotients(n: int):
 Isomorphism = tuple[Permutation, Permutation]
 """An isomorphism between two cyclic groups where the first generator is mapped to the second."""
 
-def _subgroup_from_tuple(G1: PermutationGroup, G2: PermutationGroup, H1: PermutationGroup, H2: PermutationGroup, f: Isomorphism):
+def _subgroup_from_tuple(G1: PermutationGroup, G2: PermutationGroup, H1: PermutationGroup, H2: PermutationGroup, f: Isomorphism) -> TupleSubgroup:
     """
     Initially:
         Select generator of G1 g.
@@ -83,19 +106,17 @@ def _subgroup_from_tuple(G1: PermutationGroup, G2: PermutationGroup, H1: Permuta
     g = f[0]
     h = f[1]
     assert G1.is_cyclic and H1.is_cyclic, "Groups must be cyclic"
-    assert G1.contains(g) and H1.contains(h), "Isomorphism must from G1 to H1"
+    assert G1.contains(g) and H1.contains(h), "Isomorphism generators must be from G1 and H1"
 
-    coset_maps = dict()
-    index = G1.order()//G2.order()
     # iterating up to index should generate all cosets
-    for i in range(index):
-        k = Coset(g**i,G2,G1)
-        v = Coset(h**i,H2,H1)
-        print(f'Mapping {k} to {v}')
-        coset_maps[k] = v
+    index = G1.order()//G2.order()
+    coset_maps = {Coset(g**i, G2, G1): Coset(h**i, H2, H1) for i in range(index)}
+
     # make sure the cosets cover the whole group
     coset_coverage = {e for coset in coset_maps.keys() for e in coset.as_list()}
     assert coset_coverage == set(G1.elements), "Failure generating cosets of G2 in G1"
+    coset_coverage = {e for coset in coset_maps.values() for e in coset.as_list()}
+    assert coset_coverage == set(H1.elements), "Failure generating cosets of H2 in H1"
 
     elements = []
     for k,v in coset_maps.items():
@@ -104,7 +125,7 @@ def _subgroup_from_tuple(G1: PermutationGroup, G2: PermutationGroup, H1: Permuta
     return elements
 
 
-def subgroups_of_cyclic_order(n: int):
+def subgroups_of_cyclic_order(n: int) -> dict[int, PermutationGroup]:
     """
     Return a dictionary of all subgroups of the cyclic group of order n.
     Dict keys are the group orders and values are the permutation groups.
@@ -120,15 +141,11 @@ def subgroups_of_cyclic_group(G: PermutationGroup) -> dict[int, PermutationGroup
     Includes the trivial group and G itself.
     """
     assert G.is_cyclic, "G must be a cyclic group"
-    d = dict()
-    # subgroup_search fails for the trivial case, just return G
-    if G.order() == 1:
-        return {1: G}
-
-    # subgroups are all cycles with order that divide the group order
-    for i in divisors(G.order()):
-        d[i] = G.subgroup_search(lambda x: x.order() == i)
-    return d
+    o = G.order()
+    g = G.generators[0]
+    # subgroups are all cycles with order that divide the group order.
+    # they can be generated by powers of the group generator.
+    return {o//i : G.subgroup([g**i]) for i in divisors(o)}
 
 
 def enumerate_cosets(G: PermutationGroup, H: PermutationGroup) -> list[Coset]:
