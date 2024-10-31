@@ -1,17 +1,26 @@
 from sympy.ntheory import factorint
 
+"""
+    Returns the characteristic factors of n.
+"""
+def char_factors(n: int):
+    return reduce_char_factors(shanks_factorisation(n))
+
+
 def shanks_factorisation(n: int) -> dict[int, list[int]]:
     """
-    Uses the factorisation method described by Daniel Shanks (1978) to produce
+    Uses the factorisation method described in [1] to produce
     the characteristic factors of the (Euler) totient of an integer n.
 
     This is equivalent to finding the primary decomposition of the modulo
     multiplication group M_n. The primary decomposition of M_n is precisely the 
     cyclic groups with orders given by these factors.
 
-    For an integer n, factor as 2^m * p_i^a_i * ... where p_i are odd primes.
-    if m >= 2, add the factor <2>, then add <2^(m-2)> if m > 2.
-    Add the prime power factors of (p_i - 1), then add <p_i^(a_i - 1)> if a_i > 1.
+    1. For an integer n, factor as 2^m * p_i^a_i * ... where p_i are odd primes.
+    2. If m >= 2, add the factor 2, then add 2^(m-2) if m > 2.
+    3. Add the prime power factors of (p_i - 1), then add p_i^(a_i - 1) if a_i > 1.
+
+    Ref: [1] Shanks, D. Solved and Unsolved Problems in Number Theory, 2nd ed. p. 93, 1978.
     """
     characteristic_factors = dict()
     # add a new factor p^a
@@ -64,38 +73,3 @@ def reduce_char_factors(characteristic_factors: dict[int, list[int]]) -> list[in
         characteristic_factors = {k:v for (k,v) in characteristic_factors.items() if len(v) > 0}
         
     return sorted(reduced_factors)
-        
-
-def factors(n: int):
-    return reduce_char_factors(shanks_factorisation(n))
-
-
-def shanks_factorisation_list(n: int) -> list[int]:
-    """
-    Shanks factorisation as above but returns in list form
-    """
-    characteristic_factors = []
-    prime_factors = factorint(n)
-
-    # for any power of 2:
-    #   add 2 for 2^2
-    #   add 2 * 2^(a-2) for 2^a, a>2
-    #   nothing otherwise
-    pow_2 = prime_factors.pop(2, 0)
-    if pow_2 >= 2:
-        characteristic_factors.append(2)
-    if pow_2 > 2:
-        characteristic_factors.append(2**(pow_2 - 2))
-
-    # for each odd prime:
-    #   pull out and factor (p - 1)
-    #   add each to char factors
-    #   add p^a-1 to char factors if a > 1
-    for (p,a) in prime_factors.items():
-        if a > 1:
-            characteristic_factors.append(p**(a-1))
-        lead_term_factors = factorint(p - 1)
-        for (q,b) in lead_term_factors.items():
-            characteristic_factors.append(q**b)
-
-    return characteristic_factors

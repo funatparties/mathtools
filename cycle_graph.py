@@ -21,7 +21,7 @@ def generate_maximal_cycles(G: PermutationGroup):
     while len(elements) > 0:
         i += 1
         (g, order) = elements.popitem(last=True)
-        print(f'Iteration {i}: generating cycle for {g}')
+        #print(f'Iteration {i}: generating cycle for {g}')
         #sanity check
         assert (g**order).is_identity, f'Order for permuation {g} is incorrect, {g}**{order}={g**order} which is not identity'
 
@@ -41,20 +41,7 @@ def generate_graph_from_cycles(cycles: list[list[Permutation]]):
     g = nx.Graph()
 
     for cycle in cycles:
-        print(f'Adding {cycle} to graph')
         # edge for each adjacent pair
         g.add_edges_from([(str(cycle[i]), str(cycle[i+1])) for i in range(len(cycle) - 1)])
         g.add_edge(str(cycle[-1]), str(cycle[0]))
     return g
-
-
-def test_plot(g: nx.Graph):
-    fig, ax = plt.subplots(figsize=(5,5))
-    nx.draw_spring(g, ax=ax)
-    plt.show()
-
-
-def test():
-    c = generate_maximal_cycles(CyclicGroup(2)*CyclicGroup(4))
-    g = generate_graph_from_cycles(c)
-    test_plot(g)
